@@ -1,0 +1,7 @@
+requests
+python-dotenv
+openai                     # for GPT-based evaluation
+pandas                    # for data handling
+scikit-learn              # for ML analysis
+matplotlib                # for visualizing performance
+streamlit or flask        # if building a dashboard
