@@ -14,7 +14,6 @@ KLAVIYO_API_KEY = os.getenv("KLAVIYO_API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 # === Set API keys ===
-openai.api_key = OPENAI_API_KEY
 BASE_URL = "https://a.klaviyo.com/api"
 HEADERS = {
     "Authorization": f"Klaviyo-API-Key {KLAVIYO_API_KEY}",
