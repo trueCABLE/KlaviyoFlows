@@ -32,34 +32,7 @@ def get_flows(limit=25):
     except Exception as e:
         st.error(f"❌ Error fetching flows: {e}")
         return []
-
-def get_flow_emails(flow_id, max_retries=3):
-    url = f"{BASE_URL}/flows/{flow_id}/flow-actions"
-    retries = 0
-
-    while retries < max_retries:
-        try:
-            response = requests.get(url, headers=HEADERS)
-            if response.status_code == 429:
-                wait = 2 ** retries
-                st.warning(f"⏳ Rate limited. Retrying in {wait}s...")
-                time.sleep(wait)
-                retries += 1
-                continue
-
-            response.raise_for_status()
-            actions = response.json().get("data", [])
-
-            email_steps = []
-
-            for action in actions:
-                action_type = action["attributes"].get("action_type", "")
-                if action_type != "SEND_EMAIL":
-                    continue
-
-                action_id = action["id"]
-                message_url = f"{BASE_URL}/flow-actions/{action_id}/flow-messages"
-
+        
 def get_flow_emails(flow_id, max_retries=3):
     url = f"{BASE_URL}/flows/{flow_id}/flow-actions"
     retries = 0
