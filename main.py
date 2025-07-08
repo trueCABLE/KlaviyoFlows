@@ -49,6 +49,7 @@ def get_flow_emails(flow_id, max_retries=3):
 
             response.raise_for_status()
             actions = response.json().get("data", [])
+            st.write(f"📦 Raw flow actions for flow {flow_id}:", actions)
 
             # Step 2: For each EMAIL-type action, make another API call to get the subject
             email_steps = []
