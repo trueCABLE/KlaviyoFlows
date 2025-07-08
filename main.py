@@ -5,6 +5,7 @@ import requests
 import openai
 import os
 from dotenv import load_dotenv
+import hashlib
 
 # === Load environment variables ===
 load_dotenv()
@@ -19,7 +20,6 @@ HEADERS = {
     "revision": "2023-10-15",
     "Content-Type": "application/json"
 }
-
 
 # === Functions ===
 def get_flows(limit=25):
@@ -44,8 +44,12 @@ def get_flow_emails(flow_id):
         st.error(f"❌ Error fetching emails for flow {flow_id}: {e}")
         return []
 
+@st.cache_data(show_spinner=False)
+def evaluate_subject_line(subject_line: str):
+    """Use GPT to evaluate email subject lines and cache results."""
+    # Generate a hash key for caching
+    cache_key = hashlib.md5(subject_line.encode()).hexdigest()
 
-def evaluate_subject_line(subject_line):
     prompt = (
         f"Evaluate the following email subject line for marketing effectiveness:\n\n"
         f"Subject: \"{subject_line}\"\n\n"
@@ -54,6 +58,7 @@ def evaluate_subject_line(subject_line):
         f"Respond in JSON like this:\n"
         f"{{\"clarity\": x, \"curiosity\": x, \"urgency\": x, \"spam_risk\": x, \"suggestion\": \"...\"}}"
     )
+
     try:
         response = openai.ChatCompletion.create(
             model="gpt-4",
@@ -63,7 +68,6 @@ def evaluate_subject_line(subject_line):
         return response.choices[0].message.content.strip()
     except Exception as e:
         return f"⚠️ OpenAI error: {e}"
-
 
 # === Streamlit UI ===
 st.set_page_config(page_title="Klaviyo + AI Subject Line Analyzer", layout="wide")
@@ -88,6 +92,7 @@ if st.button("Fetch Flows"):
         flows = get_flows(limit)
 
 if flows:
+    st.success(f"✅ Found {len(flows)} flows. Starting subject line analysis...")
     for flow in flows:
         flow_id = flow["id"]
         flow_name = flow["attributes"]["name"]
@@ -101,13 +106,18 @@ if flows:
                 continue
 
             for email in emails:
+                if email["attributes"]["action_type"] != "EMAIL":
+                    continue
+
                 subject = email["attributes"].get("subject", "No subject line")
                 email_name = email["attributes"].get("name", "Unnamed Email")
-                st.markdown(f"**📧 {email_name}**")
-                st.markdown(f"*Subject:* `{subject}`")
+                
+                st.markdown(f"### 📧 {email_name}")
+                st.markdown(f"**Subject:** `{subject}`")
 
-                if st.button(f"Analyze Subject", key=f"{flow_id}_{email['id']}"):
-                    with st.spinner("Analyzing with GPT..."):
-                        result = evaluate_subject_line(subject)
-                        st.text("📊 AI Feedback:")
-                        st.code(result, language="json")
+                with st.spinner("Analyzing with GPT..."):
+                    result = evaluate_subject_line(subject)
+
+                st.markdown("**🤖 AI Feedback:**")
+                st.code(result, language="json")
+                st.markdown("---")
