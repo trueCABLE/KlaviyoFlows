@@ -7,15 +7,6 @@ import os
 from dotenv import load_dotenv
 import hashlib
 import time
-import signal
-
-class TimeoutException(Exception):
-    pass
-
-def timeout_handler(signum, frame):
-    raise TimeoutException
-
-signal.signal(signal.SIGALRM, timeout_handler)
 
 # === Load environment variables ===
 load_dotenv()
@@ -168,10 +159,16 @@ if flows:
         flow_name = flow["attributes"]["name"]
         flow_status = flow["attributes"]["status"]
 
-        signal.alarm(15)  # ⏱️ Timeout after 15 seconds per flow
-        try:
-            with st.expander(f"📨 {flow_name} — [{flow_status}]"):
+        start_time = time.perf_counter()
+
+        with st.expander(f"📨 {flow_name} — [{flow_status}]"):
+            try:
                 emails = get_flow_emails(flow_id)
+                
+                elapsed = time.perf_counter() - start_time
+                if elapsed > 15:
+                    st.warning(f"⚠️ Skipped flow `{flow_name}` — took too long ({elapsed:.1f}s).")
+                    continue
 
                 if not emails:
                     st.info("No email steps found in this flow.")
@@ -180,7 +177,7 @@ if flows:
                 for email in emails:
                     subject = email.get("subject", "No subject line")
                     email_name = email.get("name", "Unnamed Email")
-                    
+
                     st.markdown(f"### 📧 {email_name}")
                     st.markdown(f"**Subject:** `{subject}`")
 
@@ -190,11 +187,7 @@ if flows:
                     st.markdown("**🤖 AI Feedback:**")
                     st.code(result, language="json")
                     st.markdown("---")
+            except Exception as e:
+                st.warning(f"⚠️ Error processing flow `{flow_name}`: {e}")
 
-        except TimeoutException:
-            st.warning(f"⚠️ Skipped flow `{flow_name}` due to timeout.")
-        finally:
-            signal.alarm(0)  # Reset alarm
-        
-        # ✅ Update progress bar
         progress_bar.progress((i + 1) / total_flows)
