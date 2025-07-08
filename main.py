@@ -101,7 +101,18 @@ def get_flow_emails(flow_id, max_retries=3):
     return []
 
 @st.cache_data(show_spinner=False)
-def evaluate_subject_line(subject_line: str):
+def evaluate_subject_line(subject_line: str, use_gpt=True):
+    if not use_gpt:
+        return (
+            "{\n"
+            f"  \"clarity\": 5,\n"
+            f"  \"curiosity\": 5,\n"
+            f"  \"urgency\": 5,\n"
+            f"  \"spam_risk\": 5,\n"
+            f"  \"suggestion\": \"Try testing different subject line variations.\"\n"
+            "}"
+        )
+
     from openai import OpenAI
     client = OpenAI(api_key=OPENAI_API_KEY)
 
@@ -116,18 +127,32 @@ def evaluate_subject_line(subject_line: str):
 
     try:
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",  # ✅ Using GPT-3.5
+            model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.6
         )
         return response.choices[0].message.content.strip()
+
     except Exception as e:
-        return f"⚠️ OpenAI error: {e}"
+        st.warning(f"⚠️ OpenAI unavailable — using fallback mode.\nReason: {e}")
+        return (
+            "{\n"
+            f"  \"clarity\": 5,\n"
+            f"  \"curiosity\": 5,\n"
+            f"  \"urgency\": 5,\n"
+            f"  \"spam_risk\": 5,\n"
+            f"  \"suggestion\": \"Try testing different subject line variations.\"\n"
+            "}"
+        )
 
 # === Streamlit UI ===
 st.set_page_config(page_title="Klaviyo + AI Subject Line Analyzer", layout="wide")
 
 st.title("📩 Klaviyo Flow Viewer + 🤖 AI Subject Line Evaluator")
+
+# ✅ GPT Toggle
+use_gpt = st.toggle("🤖 Use OpenAI for subject line analysis", value=True)
+st.caption(f"🔌 {'GPT Mode Active' if use_gpt else 'Fallback Mode Only'}")
 
 if not KLAVIYO_API_KEY:
     st.error("KLAVIYO_API_KEY not set.")
@@ -180,7 +205,7 @@ if flows:
                     st.markdown(f"**Subject:** `{subject}`")
 
                     with st.spinner("Analyzing with GPT..."):
-                        result = evaluate_subject_line(subject)
+                        result = evaluate_subject_line(subject, use_gpt=use_gpt)
 
                     st.markdown("**🤖 AI Feedback:**")
                     st.code(result, language="json")
