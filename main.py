@@ -6,6 +6,7 @@ import openai
 import os
 from dotenv import load_dotenv
 import hashlib
+import time
 
 # === Load environment variables ===
 load_dotenv()
@@ -32,17 +33,37 @@ def get_flows(limit=25):
         st.error(f"❌ Error fetching flows: {e}")
         return []
 
-
-def get_flow_emails(flow_id):
+def get_flow_emails(flow_id, max_retries=3):
     url = f"{BASE_URL}/flows/{flow_id}/flow-actions"
-    try:
-        response = requests.get(url, headers=HEADERS)
-        response.raise_for_status()
-        actions = response.json().get("data", [])
-        return [a for a in actions if a['attributes']['action_type'] == 'EMAIL']
-    except Exception as e:
-        st.error(f"❌ Error fetching emails for flow {flow_id}: {e}")
-        return []
+    retries = 0
+
+    while retries < max_retries:
+        try:
+            response = requests.get(url, headers=HEADERS)
+            if response.status_code == 429:
+                wait = 2 ** retries
+                st.warning(f"⏳ Rate limited. Retrying in {wait}s...")
+                time.sleep(wait)
+                retries += 1
+                continue
+
+            response.raise_for_status()
+            actions = response.json().get("data", [])
+
+            # Accept EMAIL, EMAIL_V2, or anything with a subject
+            email_steps = [
+                a for a in actions
+                if a['attributes'].get('action_type', '').startswith('EMAIL')
+                or a['attributes'].get('subject')
+            ]
+            return email_steps
+
+        except requests.exceptions.RequestException as e:
+            st.error(f"❌ Error fetching emails for flow {flow_id}: {e}")
+            return []
+
+    st.error(f"❌ Failed to fetch emails for flow {flow_id} after {max_retries} retries.")
+    return []
 
 @st.cache_data(show_spinner=False)
 def evaluate_subject_line(subject_line: str):
