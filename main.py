@@ -60,32 +60,69 @@ def get_flow_emails(flow_id, max_retries=3):
                 action_id = action["id"]
                 message_url = f"{BASE_URL}/flow-actions/{action_id}/flow-messages"
 
-                try:
-                    msg_response = requests.get(message_url, headers=HEADERS)
-                    msg_response.raise_for_status()
-                    flow_messages = msg_response.json().get("data", [])
+def get_flow_emails(flow_id, max_retries=3):
+    url = f"{BASE_URL}/flows/{flow_id}/flow-actions"
+    retries = 0
 
-                    if not flow_messages:
-                        continue
+    while retries < max_retries:
+        try:
+            response = requests.get(url, headers=HEADERS)
+            if response.status_code == 429:
+                wait = 2 ** retries
+                st.warning(f"⏳ Rate limited. Retrying flow-actions in {wait}s...")
+                time.sleep(wait)
+                retries += 1
+                continue
 
-                    message = flow_messages[0]  # Usually only one per action
-                    subject = message["attributes"].get("subject", "No subject")
-                    name = message["attributes"].get("name", "Unnamed Email")
+            response.raise_for_status()
+            actions = response.json().get("data", [])
 
-                    email_steps.append({
-                        "name": name,
-                        "subject": subject,
-                        "id": action_id
-                    })
+            email_steps = []
 
-                except Exception as e:
-                    st.warning(f"⚠️ Failed to fetch message for action {action_id}: {e}")
+            for action in actions:
+                action_type = action.get("attributes", {}).get("action_type", "")
+                if action_type != "SEND_EMAIL":
                     continue
+
+                action_id = action.get("id")
+                message_url = f"{BASE_URL}/flow-actions/{action_id}/flow-messages"
+
+                inner_retries = 0
+                while inner_retries < 3:
+                    msg_response = requests.get(message_url, headers=HEADERS)
+                    if msg_response.status_code == 429:
+                        wait = 2 ** inner_retries
+                        st.warning(f"⏳ Rate limit hit fetching message {action_id}. Retrying in {wait}s...")
+                        time.sleep(wait)
+                        inner_retries += 1
+                        continue
+                    try:
+                        msg_response.raise_for_status()
+                        break  # success
+                    except requests.exceptions.RequestException as e:
+                        st.warning(f"⚠️ Failed to fetch message for action {action_id}: {e}")
+                        break
+
+                flow_messages = msg_response.json().get("data", []) if msg_response.ok else []
+                if not flow_messages:
+                    continue
+
+                message = flow_messages[0]
+                subject = message.get("attributes", {}).get("subject", "No subject")
+                name = message.get("attributes", {}).get("name", "Unnamed Email")
+
+                email_steps.append({
+                    "name": name,
+                    "subject": subject,
+                    "id": action_id
+                })
+
+                time.sleep(0.25)  # 🕒 Slight delay to avoid rate limits
 
             return email_steps
 
         except requests.exceptions.RequestException as e:
-            st.error(f"❌ Error fetching emails for flow {flow_id}: {e}")
+            st.error(f"❌ Error fetching flow-actions for flow {flow_id}: {e}")
             return []
 
     st.error(f"❌ Failed to fetch emails for flow {flow_id} after {max_retries} retries.")
