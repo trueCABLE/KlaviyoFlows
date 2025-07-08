@@ -153,7 +153,7 @@ if flows:
                 continue
 
             for email in emails:
-                if email["attributes"]["action_type"] != "EMAIL":
+                if email.get("attributes", {}).get("action_type") != "SEND_EMAIL":
                     continue
 
                 subject = email["attributes"].get("subject", "No subject line")
