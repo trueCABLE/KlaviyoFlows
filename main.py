@@ -2,7 +2,7 @@
 
 import streamlit as st
 import requests
-import openai
+from openai import OpenAI
 import os
 from dotenv import load_dotenv
 import hashlib
@@ -117,11 +117,10 @@ def evaluate_subject_line(subject_line: str):
 
     try:
         response = client.chat.completions.create(
-            model="gpt-4-turbo",  # ✅ NEW format for GPT-4 in openai>=1.0.0
+            model="gpt-3.5-turbo",  # ✅ Using GPT-3.5
             messages=[{"role": "user", "content": prompt}],
             temperature=0.6
         )
-
         return response.choices[0].message.content.strip()
     except Exception as e:
         return f"⚠️ OpenAI error: {e}"
