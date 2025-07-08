@@ -7,6 +7,15 @@ import os
 from dotenv import load_dotenv
 import hashlib
 import time
+import signal
+
+class TimeoutException(Exception):
+    pass
+
+def timeout_handler(signum, frame):
+    raise TimeoutException
+
+signal.signal(signal.SIGALRM, timeout_handler)
 
 # === Load environment variables ===
 load_dotenv()
@@ -149,32 +158,43 @@ if st.button("Fetch Flows"):
         flows = get_flows(limit)
 
 if flows:
-    st.success(f"✅ Found {len(flows)} flows. Starting subject line analysis...")
-    for flow in flows:
+    st.success(f"✅ Found {len(flows)} flows. Starting flow analysis...")
+    
+    progress_bar = st.progress(0)
+    total_flows = len(flows)
+
+    for i, flow in enumerate(flows):
         flow_id = flow["id"]
         flow_name = flow["attributes"]["name"]
         flow_status = flow["attributes"]["status"]
 
-        with st.expander(f"📨 {flow_name} — [{flow_status}]"):
-            emails = get_flow_emails(flow_id)
+        signal.alarm(15)  # ⏱️ Timeout after 15 seconds per flow
+        try:
+            with st.expander(f"📨 {flow_name} — [{flow_status}]"):
+                emails = get_flow_emails(flow_id)
 
-            if not emails:
-                st.info("No email steps found in this flow.")
-                continue
-
-            for email in emails:
-                if email.get("attributes", {}).get("action_type") != "SEND_EMAIL":
+                if not emails:
+                    st.info("No email steps found in this flow.")
                     continue
 
-                subject = email["attributes"].get("subject", "No subject line")
-                email_name = email["attributes"].get("name", "Unnamed Email")
-                
-                st.markdown(f"### 📧 {email_name}")
-                st.markdown(f"**Subject:** `{subject}`")
+                for email in emails:
+                    subject = email.get("subject", "No subject line")
+                    email_name = email.get("name", "Unnamed Email")
+                    
+                    st.markdown(f"### 📧 {email_name}")
+                    st.markdown(f"**Subject:** `{subject}`")
 
-                with st.spinner("Analyzing with GPT..."):
-                    result = evaluate_subject_line(subject)
+                    with st.spinner("Analyzing with GPT..."):
+                        result = evaluate_subject_line(subject)
 
-                st.markdown("**🤖 AI Feedback:**")
-                st.code(result, language="json")
-                st.markdown("---")
+                    st.markdown("**🤖 AI Feedback:**")
+                    st.code(result, language="json")
+                    st.markdown("---")
+
+        except TimeoutException:
+            st.warning(f"⚠️ Skipped flow `{flow_name}` due to timeout.")
+        finally:
+            signal.alarm(0)  # Reset alarm
+        
+        # ✅ Update progress bar
+        progress_bar.progress((i + 1) / total_flows)
