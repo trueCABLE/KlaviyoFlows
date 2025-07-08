@@ -1,5 +1,7 @@
 import requests
 import os
+from dotenv import load_dotenv
+load_dotenv()
 
 # === CONFIG ===
 KLAVIYO_API_KEY = os.getenv("KLAVIYO_API_KEY")  # or paste your private API key directly here
