@@ -49,24 +49,29 @@ def get_flow_emails(flow_id, max_retries=3):
 
             response.raise_for_status()
             actions = response.json().get("data", [])
-            st.write(f"📦 Raw flow actions for flow {flow_id}:", actions)
 
-            # Step 2: For each EMAIL-type action, make another API call to get the subject
             email_steps = []
+
             for action in actions:
                 action_type = action["attributes"].get("action_type", "")
-                if not action_type.startswith("EMAIL"):
+                if action_type != "SEND_EMAIL":
                     continue
 
                 action_id = action["id"]
-                action_url = f"{BASE_URL}/flow-actions/{action_id}"
+                message_url = f"{BASE_URL}/flow-actions/{action_id}/flow-messages"
 
                 try:
-                    action_response = requests.get(action_url, headers=HEADERS)
-                    action_response.raise_for_status()
-                    detailed_action = action_response.json().get("data", {})
-                    subject = detailed_action["attributes"].get("subject", "")
-                    name = detailed_action["attributes"].get("name", "")
+                    msg_response = requests.get(message_url, headers=HEADERS)
+                    msg_response.raise_for_status()
+                    flow_messages = msg_response.json().get("data", [])
+
+                    if not flow_messages:
+                        continue
+
+                    message = flow_messages[0]  # Usually only one per action
+                    subject = message["attributes"].get("subject", "No subject")
+                    name = message["attributes"].get("name", "Unnamed Email")
+
                     email_steps.append({
                         "name": name,
                         "subject": subject,
@@ -74,7 +79,7 @@ def get_flow_emails(flow_id, max_retries=3):
                     })
 
                 except Exception as e:
-                    st.warning(f"⚠️ Failed to fetch email action {action_id}: {e}")
+                    st.warning(f"⚠️ Failed to fetch message for action {action_id}: {e}")
                     continue
 
             return email_steps
@@ -85,6 +90,7 @@ def get_flow_emails(flow_id, max_retries=3):
 
     st.error(f"❌ Failed to fetch emails for flow {flow_id} after {max_retries} retries.")
     return []
+
 @st.cache_data(show_spinner=False)
 def evaluate_subject_line(subject_line: str):
     """Use GPT to evaluate email subject lines and cache results."""
