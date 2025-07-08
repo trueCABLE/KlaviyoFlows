@@ -103,9 +103,8 @@ def get_flow_emails(flow_id, max_retries=3):
 
 @st.cache_data(show_spinner=False)
 def evaluate_subject_line(subject_line: str):
-    """Use GPT to evaluate email subject lines and cache results."""
-    # Generate a hash key for caching
-    cache_key = hashlib.md5(subject_line.encode()).hexdigest()
+    from openai import OpenAI
+    client = OpenAI(api_key=OPENAI_API_KEY)
 
     prompt = (
         f"Evaluate the following email subject line for marketing effectiveness:\n\n"
@@ -117,7 +116,7 @@ def evaluate_subject_line(subject_line: str):
     )
 
     try:
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-4",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.6
