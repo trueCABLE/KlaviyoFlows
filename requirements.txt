@@ -1,6 +1,6 @@
 requests
 python-dotenv
-openai                     # for GPT-based evaluation
+openai>=1.2.0                     # for GPT-based evaluation
 pandas                    # for data handling
 scikit-learn              # for ML analysis
 matplotlib                # for visualizing performance 
