@@ -97,7 +97,7 @@ def get_flow_emails(flow_id, max_retries=3):
                 email_steps.append({
                     "name": name,
                     "subject": subject,
-                    "id": action_id
+                    "id": action_id,
                     "message_id": message_id
                 })
 
