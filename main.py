@@ -22,6 +22,16 @@ HEADERS = {
 }
 
 # === Functions ===
+def get_email_analytics(message_id):
+    url = f"{BASE_URL}/metrics/email-performance/{message_id}/overview"
+    try:
+        response = requests.get(url, headers=HEADERS)
+        response.raise_for_status()
+        return response.json().get("data", {}).get("attributes", {})
+    except Exception as e:
+        st.warning(f"⚠️ Failed to fetch analytics for message {message_id}: {e}")
+        return {}
+
 def get_flows(limit=25):
     url = f"{BASE_URL}/flows/?page[size]={limit}"
     try:
@@ -82,11 +92,13 @@ def get_flow_emails(flow_id, max_retries=3):
                 message = flow_messages[0]
                 subject = message.get("attributes", {}).get("subject", "No subject")
                 name = message.get("attributes", {}).get("name", "Unnamed Email")
+                message_id = message.get("id")
 
                 email_steps.append({
                     "name": name,
                     "subject": subject,
                     "id": action_id
+                    "message_id": message_id
                 })
 
                 time.sleep(0.25)  # 🕒 Slight delay to avoid rate limits
@@ -202,6 +214,17 @@ if flows:
                 for email in emails:
                     subject = email.get("subject", "No subject line")
                     email_name = email.get("name", "Unnamed Email")
+                    analytics = get_email_analytics(email.get("message_id"))
+
+                    if analytics:
+                        st.markdown("📊 **Email Performance**")
+                        st.write({
+                            "Sends": analytics.get("send_count"),
+                            "Opens": analytics.get("open_count"),
+                            "Clicks": analytics.get("click_count"),
+                            "Revenue": analytics.get("revenue", "$0"),
+                            "Bounce Rate": analytics.get("bounce_rate", "N/A"),
+                        })
 
                     st.markdown(f"### 📧 {email_name}")
                     st.markdown(f"**Subject:** `{subject}`")
