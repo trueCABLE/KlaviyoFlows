@@ -22,7 +22,7 @@ HEADERS = {
 }
 
 # === Functions ===
-def get_flow_action_analytics(action_id):
+def get_email_analytics(action_id):
     url = f"{BASE_URL}/flow-actions/{action_id}/analytics-summary"
     try:
         response = requests.get(url, headers=HEADERS)
