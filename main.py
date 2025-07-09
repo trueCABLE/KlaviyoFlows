@@ -161,11 +161,6 @@ def evaluate_subject_line(subject_line: str, use_gpt=True):
 st.set_page_config(page_title="Klaviyo + AI Subject Line Analyzer", layout="wide")
 st.title("📩 Klaviyo Flow Viewer + 🤖 AI Subject Line Evaluator")
 
-analytics = get_flow_action_analytics(email["id"])
-if analytics:
-    st.markdown("📊 **Email Performance:**")
-    st.json(analytics)
-
 # ✅ GPT Toggle must show BEFORE API key validation
 use_gpt = st.toggle("🤖 Use OpenAI for subject line analysis", value=True)
 st.caption(f"🔌 {'GPT Mode Active' if use_gpt else 'Fallback Mode Only'}")
