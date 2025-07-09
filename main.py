@@ -58,7 +58,6 @@ def get_flow_emails(flow_id, max_retries=3):
 
             response.raise_for_status()
             actions = response.json().get("data", [])
-
             email_steps = []
 
             for action in actions:
@@ -80,7 +79,7 @@ def get_flow_emails(flow_id, max_retries=3):
                         continue
                     try:
                         msg_response.raise_for_status()
-                        break  # success
+                        break
                     except requests.exceptions.RequestException as e:
                         st.warning(f"⚠️ Failed to fetch message for action {action_id}: {e}")
                         break
@@ -90,9 +89,21 @@ def get_flow_emails(flow_id, max_retries=3):
                     continue
 
                 message = flow_messages[0]
-                subject = message.get("attributes", {}).get("subject", "No subject")
-                name = message.get("attributes", {}).get("name", "Unnamed Email")
-                message_id = message.get("id")
+                attributes = message.get("attributes", {})
+                subject = attributes.get("subject", "No subject")
+                name = attributes.get("name", "Unnamed Email")
+
+                # ✅ Correct message ID for analytics
+                message_id = (
+                    message.get("relationships", {})
+                    .get("message", {})
+                    .get("data", {})
+                    .get("id")
+                )
+
+                if not message_id:
+                    st.info(f"ℹ️ Skipping message '{name}' — no analytics ID found.")
+                    continue
 
                 email_steps.append({
                     "name": name,
@@ -101,7 +112,7 @@ def get_flow_emails(flow_id, max_retries=3):
                     "message_id": message_id
                 })
 
-                time.sleep(0.25)  # 🕒 Slight delay to avoid rate limits
+                time.sleep(0.25)  # To reduce rate limits
 
             return email_steps
 
