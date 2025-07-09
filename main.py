@@ -150,16 +150,17 @@ st.set_page_config(page_title="Klaviyo + AI Subject Line Analyzer", layout="wide
 
 st.title("📩 Klaviyo Flow Viewer + 🤖 AI Subject Line Evaluator")
 
-# ✅ GPT Toggle
+# ✅ GPT Toggle should always show
 use_gpt = st.toggle("🤖 Use OpenAI for subject line analysis", value=True)
 st.caption(f"🔌 {'GPT Mode Active' if use_gpt else 'Fallback Mode Only'}")
 
+# Now handle missing keys
 if not KLAVIYO_API_KEY:
     st.error("KLAVIYO_API_KEY not set.")
     st.stop()
-if not OPENAI_API_KEY:
-    st.error("OPENAI_API_KEY not set.")
-    st.stop()
+if use_gpt and not OPENAI_API_KEY:
+    st.warning("⚠️ OPENAI_API_KEY not set. Fallback mode will be used.")
+    use_gpt = False
 
 # === Flow Viewer ===
 st.header("🔍 View Your Klaviyo Flows")
