@@ -22,15 +22,15 @@ HEADERS = {
 }
 
 # === Functions ===
-def get_email_analytics(message_id):
-    url = f"{BASE_URL}/metrics/email-performance/{message_id}/overview"
+def get_flow_action_analytics(action_id):
+    url = f"{BASE_URL}/flow-actions/{action_id}/analytics-summary"
     try:
         response = requests.get(url, headers=HEADERS)
         response.raise_for_status()
-        return response.json().get("data", {}).get("attributes", {})
+        return response.json()
     except Exception as e:
-        st.warning(f"⚠️ Failed to fetch analytics for message {message_id}: {e}")
-        return {}
+        st.warning(f"⚠️ Failed to fetch analytics for action {action_id}: {e}")
+        return None
 
 def get_flows(limit=25):
     url = f"{BASE_URL}/flows/?page[size]={limit}"
@@ -160,6 +160,11 @@ def evaluate_subject_line(subject_line: str, use_gpt=True):
 # === Streamlit UI Setup ===
 st.set_page_config(page_title="Klaviyo + AI Subject Line Analyzer", layout="wide")
 st.title("📩 Klaviyo Flow Viewer + 🤖 AI Subject Line Evaluator")
+
+analytics = get_flow_action_analytics(email["id"])
+if analytics:
+    st.markdown("📊 **Email Performance:**")
+    st.json(analytics)
 
 # ✅ GPT Toggle must show BEFORE API key validation
 use_gpt = st.toggle("🤖 Use OpenAI for subject line analysis", value=True)
