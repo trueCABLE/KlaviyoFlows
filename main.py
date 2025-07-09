@@ -145,21 +145,22 @@ def evaluate_subject_line(subject_line: str, use_gpt=True):
             "}"
         )
 
-# === Streamlit UI ===
+# === Streamlit UI Setup ===
 st.set_page_config(page_title="Klaviyo + AI Subject Line Analyzer", layout="wide")
-
 st.title("📩 Klaviyo Flow Viewer + 🤖 AI Subject Line Evaluator")
 
-# ✅ GPT Toggle should always show
+# ✅ GPT Toggle must show BEFORE API key validation
 use_gpt = st.toggle("🤖 Use OpenAI for subject line analysis", value=True)
 st.caption(f"🔌 {'GPT Mode Active' if use_gpt else 'Fallback Mode Only'}")
 
-# Now handle missing keys
+# === Validate Keys
 if not KLAVIYO_API_KEY:
-    st.error("KLAVIYO_API_KEY not set.")
+    st.error("❌ KLAVIYO_API_KEY not set.")
     st.stop()
+
+# If GPT is toggled *on* but key is missing, warn + disable
 if use_gpt and not OPENAI_API_KEY:
-    st.warning("⚠️ OPENAI_API_KEY not set. Fallback mode will be used.")
+    st.warning("⚠️ OPENAI_API_KEY not set. GPT analysis will fallback.")
     use_gpt = False
 
 # === Flow Viewer ===
