@@ -22,14 +22,14 @@ HEADERS = {
 }
 
 # === Functions ===
-def get_email_analytics(action_id):
-    url = f"{BASE_URL}/flow-actions/{action_id}/analytics-summary"
+def get_email_analytics(message_id):
+    url = f"{BASE_URL}/metrics/email-performance/{message_id}/overview"
     try:
         response = requests.get(url, headers=HEADERS)
         response.raise_for_status()
-        return response.json()
+        return response.json().get("data", {}).get("attributes", {})
     except Exception as e:
-        st.warning(f"⚠️ Failed to fetch analytics for action {action_id}: {e}")
+        st.warning(f"⚠️ Failed to fetch analytics for message {message_id}: {e}")
         return None
 
 def get_flows(limit=25):
