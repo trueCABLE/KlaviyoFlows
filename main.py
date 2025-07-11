@@ -93,8 +93,8 @@ def get_flow_emails(flow_id, max_retries=3):
                 subject = attributes.get("subject", "No subject")
                 name = attributes.get("name", "Unnamed Email")
 
-                # ✅ Use the flow-message's own ID for analytics
-                message_id = message.get("id")
+                # ✅ Attempt to extract the message_id for analytics
+                message_id = attributes.get("message_id") or message.get("id")
 
                 if not message_id:
                     st.info(f"ℹ️ Skipping message '{name}' — no analytics ID found.")
