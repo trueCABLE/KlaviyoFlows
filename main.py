@@ -23,7 +23,7 @@ HEADERS = {
 
 # === Functions ===
 def get_email_analytics(message_id):
-    url = f"{BASE_URL}/metrics/email-performance/{message_id}/overview"
+    url = f"{BASE_URL}/flow-actions/{action_id}/analytics-summary"
     try:
         response = requests.get(url, headers=HEADERS)
         response.raise_for_status()
@@ -220,7 +220,7 @@ if flows:
                 for email in emails:
                     subject = email.get("subject", "No subject line")
                     email_name = email.get("name", "Unnamed Email")
-                    analytics = get_email_analytics(email.get("message_id"))
+                    analytics = get_flow_action_analytics(email.get("id"))
 
                     if analytics:
                         st.markdown("📊 **Email Performance**")
